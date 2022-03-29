@@ -27,24 +27,17 @@ const (
 	// NodeVersion is the version of geth we are using.
 	NodeVersion = "1.9.24"
 
-	// Blockchain is Ethereum.
-	Blockchain string = "Ethereum"
+	// Blockchain is Velas.
+	Blockchain string = "Velas"
 
 	// MainnetNetwork is the value of the network
 	// in MainnetNetworkIdentifier.
 	MainnetNetwork string = "Mainnet"
 
-	// RopstenNetwork is the value of the network
-	// in RopstenNetworkIdentifier.
-	RopstenNetwork string = "Ropsten"
+	// TestnetNetwork is the value of the network
+	// in TestnetNetworkIdentifier.
+	TestnetNetwork string = "Testnet"
 
-	// RinkebyNetwork is the value of the network
-	// in RinkebyNetworkNetworkIdentifier.
-	RinkebyNetwork string = "Rinkeby"
-
-	// GoerliNetwork is the value of the network
-	// in GoerliNetworkNetworkIdentifier.
-	GoerliNetwork string = "Goerli"
 
 	// Symbol is the symbol value
 	// used in Currency.

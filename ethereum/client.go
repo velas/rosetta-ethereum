@@ -34,7 +34,6 @@ import (
 	EthTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"golang.org/x/sync/semaphore"
@@ -57,9 +56,8 @@ const (
 //
 // Client borrows HEAVILY from https://github.com/ethereum/go-ethereum/tree/master/ethclient.
 type Client struct {
-	p  *params.ChainConfig
 	tc *tracers.TraceConfig
-
+	chainID        *big.Int
 	c JSONRPC
 	g GraphQL
 
@@ -69,7 +67,7 @@ type Client struct {
 }
 
 // NewClient creates a Client that from the provided url and params.
-func NewClient(url string, params *params.ChainConfig, skipAdminCalls bool) (*Client, error) {
+func NewClient(url string, chainID        *big.Int, skipAdminCalls bool) (*Client, error) {
 	c, err := rpc.DialHTTPWithClient(url, &http.Client{
 		Timeout: gethHTTPTimeout,
 	})
@@ -87,7 +85,7 @@ func NewClient(url string, params *params.ChainConfig, skipAdminCalls bool) (*Cl
 		return nil, fmt.Errorf("%w: unable to create GraphQL client", err)
 	}
 
-	return &Client{params, tc, c, g, semaphore.NewWeighted(maxTraceConcurrency), skipAdminCalls}, nil
+	return &Client{ tc, chainID,c, g, semaphore.NewWeighted(maxTraceConcurrency), skipAdminCalls}, nil
 }
 
 // Close shuts down the RPC client connection.
@@ -1265,14 +1263,15 @@ func (ec *Client) populateTransaction(
 func (ec *Client) miningReward(
 	currentBlock *big.Int,
 ) int64 {
+	// FIXME wip velas
 	blockReward := ethash.FrontierBlockReward.Int64()
-	if ec.p.IsByzantium(currentBlock) {
-		blockReward = ethash.ByzantiumBlockReward.Int64()
-	}
-
-	if ec.p.IsConstantinople(currentBlock) {
-		blockReward = ethash.ConstantinopleBlockReward.Int64()
-	}
+	//if ec.p.IsByzantium(currentBlock) {
+	//blockReward = ethash.ByzantiumBlockReward.Int64()
+	//}
+	//
+	//if ec.p.IsConstantinople(currentBlock) {
+	//	blockReward = ethash.ConstantinopleBlockReward.Int64()
+	//}
 
 	return blockReward
 }

@@ -17,13 +17,13 @@ package configuration
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"strconv"
 
 	"github.com/coinbase/rosetta-ethereum/ethereum"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/ethereum/go-ethereum/params"
 )
 
 // Mode is the setting that determines if
@@ -101,8 +101,7 @@ type Configuration struct {
 	GethArguments          string
 	SkipGethAdmin          bool
 
-	// Block Reward Data
-	Params *params.ChainConfig
+	ChainID                *big.Int
 }
 
 // LoadConfiguration attempts to create a new Configuration
@@ -130,32 +129,16 @@ func LoadConfiguration() (*Configuration, error) {
 			Network:    ethereum.MainnetNetwork,
 		}
 		config.GenesisBlockIdentifier = ethereum.MainnetGenesisBlockIdentifier
-		config.Params = params.MainnetChainConfig
+		config.ChainID = big.NewInt(106)
 		config.GethArguments = ethereum.MainnetGethArguments
-	case Testnet, Ropsten:
+	case Testnet:
 		config.Network = &types.NetworkIdentifier{
 			Blockchain: ethereum.Blockchain,
-			Network:    ethereum.RopstenNetwork,
+			Network:    ethereum.TestnetNetwork,
 		}
 		config.GenesisBlockIdentifier = ethereum.RopstenGenesisBlockIdentifier
-		config.Params = params.RopstenChainConfig
+		config.ChainID = big.NewInt(111)
 		config.GethArguments = ethereum.RopstenGethArguments
-	case Rinkeby:
-		config.Network = &types.NetworkIdentifier{
-			Blockchain: ethereum.Blockchain,
-			Network:    ethereum.RinkebyNetwork,
-		}
-		config.GenesisBlockIdentifier = ethereum.RinkebyGenesisBlockIdentifier
-		config.Params = params.RinkebyChainConfig
-		config.GethArguments = ethereum.RinkebyGethArguments
-	case Goerli:
-		config.Network = &types.NetworkIdentifier{
-			Blockchain: ethereum.Blockchain,
-			Network:    ethereum.GoerliNetwork,
-		}
-		config.GenesisBlockIdentifier = ethereum.GoerliGenesisBlockIdentifier
-		config.Params = params.GoerliChainConfig
-		config.GethArguments = ethereum.GoerliGethArguments
 	case "":
 		return nil, errors.New("NETWORK must be populated")
 	default:

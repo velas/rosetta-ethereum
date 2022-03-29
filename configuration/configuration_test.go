@@ -16,13 +16,13 @@ package configuration
 
 import (
 	"errors"
+	"math/big"
 	"os"
 	"testing"
 
 	"github.com/coinbase/rosetta-ethereum/ethereum"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,7 +60,7 @@ func TestLoadConfiguration(t *testing.T) {
 					Network:    ethereum.MainnetNetwork,
 					Blockchain: ethereum.Blockchain,
 				},
-				Params:                 params.MainnetChainConfig,
+				ChainID: big.NewInt(106),
 				GenesisBlockIdentifier: ethereum.MainnetGenesisBlockIdentifier,
 				Port:                   1000,
 				GethURL:                DefaultGethURL,
@@ -80,7 +80,7 @@ func TestLoadConfiguration(t *testing.T) {
 					Network:    ethereum.MainnetNetwork,
 					Blockchain: ethereum.Blockchain,
 				},
-				Params:                 params.MainnetChainConfig,
+				ChainID: big.NewInt(106),
 				GenesisBlockIdentifier: ethereum.MainnetGenesisBlockIdentifier,
 				Port:                   1000,
 				GethURL:                "http://blah",
@@ -96,48 +96,14 @@ func TestLoadConfiguration(t *testing.T) {
 			cfg: &Configuration{
 				Mode: Online,
 				Network: &types.NetworkIdentifier{
-					Network:    ethereum.RopstenNetwork,
+					Network:    ethereum.TestnetNetwork,
 					Blockchain: ethereum.Blockchain,
 				},
-				Params:                 params.RopstenChainConfig,
+				ChainID: big.NewInt(111),
 				GenesisBlockIdentifier: ethereum.RopstenGenesisBlockIdentifier,
 				Port:                   1000,
 				GethURL:                DefaultGethURL,
 				GethArguments:          ethereum.RopstenGethArguments,
-			},
-		},
-		"all set (rinkeby)": {
-			Mode:    string(Online),
-			Network: Rinkeby,
-			Port:    "1000",
-			cfg: &Configuration{
-				Mode: Online,
-				Network: &types.NetworkIdentifier{
-					Network:    ethereum.RinkebyNetwork,
-					Blockchain: ethereum.Blockchain,
-				},
-				Params:                 params.RinkebyChainConfig,
-				GenesisBlockIdentifier: ethereum.RinkebyGenesisBlockIdentifier,
-				Port:                   1000,
-				GethURL:                DefaultGethURL,
-				GethArguments:          ethereum.RinkebyGethArguments,
-			},
-		},
-		"all set (goerli)": {
-			Mode:    string(Online),
-			Network: Goerli,
-			Port:    "1000",
-			cfg: &Configuration{
-				Mode: Online,
-				Network: &types.NetworkIdentifier{
-					Network:    ethereum.GoerliNetwork,
-					Blockchain: ethereum.Blockchain,
-				},
-				Params:                 params.GoerliChainConfig,
-				GenesisBlockIdentifier: ethereum.GoerliGenesisBlockIdentifier,
-				Port:                   1000,
-				GethURL:                DefaultGethURL,
-				GethArguments:          ethereum.GoerliGethArguments,
 			},
 		},
 		"all set (testnet)": {
@@ -148,10 +114,10 @@ func TestLoadConfiguration(t *testing.T) {
 			cfg: &Configuration{
 				Mode: Online,
 				Network: &types.NetworkIdentifier{
-					Network:    ethereum.RopstenNetwork,
+					Network:    ethereum.TestnetNetwork,
 					Blockchain: ethereum.Blockchain,
 				},
-				Params:                 params.RopstenChainConfig,
+				ChainID: big.NewInt(111),
 				GenesisBlockIdentifier: ethereum.RopstenGenesisBlockIdentifier,
 				Port:                   1000,
 				GethURL:                DefaultGethURL,
