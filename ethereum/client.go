@@ -372,6 +372,8 @@ func (ec *Client) getUncles(
 	head *types.Header,
 	body *rpcBlock,
 ) ([]*types.Header, error) {
+	emptyRootHash := head.TxHash == types.EmptyRootHash || head.TxHash == common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000")
+
 	// Quick-verify transaction and uncle lists. This mostly helps with debugging the server.
 	if head.UncleHash == types.EmptyUncleHash && len(body.UncleHashes) > 0 {
 		return nil, fmt.Errorf(
@@ -383,12 +385,12 @@ func (ec *Client) getUncles(
 			"server returned empty uncle list but block header indicates uncles",
 		)
 	}
-	if head.TxHash == types.EmptyRootHash && len(body.Transactions) > 0 {
+	if emptyRootHash && len(body.Transactions) > 0 {
 		return nil, fmt.Errorf(
 			"server returned non-empty transaction list but block header indicates no transactions",
 		)
 	}
-	if head.TxHash != types.EmptyRootHash && len(body.Transactions) == 0 {
+	if !emptyRootHash && len(body.Transactions) == 0 {
 		return nil, fmt.Errorf(
 			"server returned empty transaction list but block header indicates transactions",
 		)
