@@ -140,7 +140,7 @@ func TestConstructionService(t *testing.T) {
 	}, metadataResponse)
 
 	// Test Payloads
-	unsignedRaw := `{"from":"0xe3a5B4d7f79d64088C8d4ef153A7DDe2B2d47309","to":"0x57B414a0332B5CaB885a451c2a28a07d1e9b8a8d","value":"0x9864aac3510d02","data":"0x","nonce":"0x0","gas_price":"0x3b9aca00","gas":"0x5208","chain_id":"0x3"}` // nolint
+	unsignedRaw := `{"from":"0xe3a5B4d7f79d64088C8d4ef153A7DDe2B2d47309","to":"0x57B414a0332B5CaB885a451c2a28a07d1e9b8a8d","value":"0x9864aac3510d02","data":"0x","nonce":"0x0","gas_price":"0x3b9aca00","gas":"0x5208","chain_id":"0x6f"}` // nolint
 	payloadsResponse, err := servicer.ConstructionPayloads(ctx, &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: networkIdentifier,
 		Operations:        ops,
@@ -168,7 +168,7 @@ func TestConstructionService(t *testing.T) {
 	parseMetadata := &parseMetadata{
 		Nonce:    metadata.Nonce,
 		GasPrice: metadata.GasPrice,
-		ChainID:  big.NewInt(3),
+		ChainID:  big.NewInt(111),
 	}
 	assert.Equal(t, &types.ConstructionParseResponse{
 		Operations:               parseOps,

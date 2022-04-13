@@ -33,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	EthTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/tracers"
-	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"golang.org/x/sync/semaphore"
@@ -156,29 +155,47 @@ func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	return (*big.Int)(&hex), nil
 }
 
+type ClusterInfo struct {
+ID      int64  `json:"id"`
+Jsonrpc string `json:"jsonrpc"`
+Result  []ClusterResult `json:"result"`
+}
+
+type ClusterResult struct {
+	FeatureSet   int64  `json:"featureSet"`
+	Gossip       string `json:"gossip"`
+	Pubkey       string `json:"pubkey"`
+	RPC          string `json:"rpc"`
+	ShredVersion int64  `json:"shredVersion"`
+	Tpu          string `json:"tpu"`
+	Version      string `json:"version"`
+}
+
+
 // Peers retrieves all peers of the node.
 func (ec *Client) peers(ctx context.Context) ([]*RosettaTypes.Peer, error) {
-	var info []*p2p.PeerInfo
+	var info *ClusterInfo
 
 	if ec.skipAdminCalls {
 		return []*RosettaTypes.Peer{}, nil
 	}
 
-	if err := ec.c.CallContext(ctx, &info, "admin_peers"); err != nil {
+	if err := ec.c.CallContext(ctx, &info, "getClusterNodes"); err != nil {
 		return nil, err
 	}
 
-	peers := make([]*RosettaTypes.Peer, len(info))
-	for i, peerInfo := range info {
+	peers := make([]*RosettaTypes.Peer, len(info.Result))
+	for i, peerInfo := range info.Result {
 		peers[i] = &RosettaTypes.Peer{
-			PeerID: peerInfo.ID,
-			Metadata: map[string]interface{}{
-				"name":      peerInfo.Name,
-				"enode":     peerInfo.Enode,
-				"caps":      peerInfo.Caps,
-				"enr":       peerInfo.ENR,
-				"protocols": peerInfo.Protocols,
-			},
+			PeerID: peerInfo.Pubkey,
+			// FIXME wip velas
+			//Metadata: map[string]interface{}{
+			//	"name":      peerInfo.Name,
+			//	"enode":     peerInfo.Enode,
+			//	"caps":      peerInfo.Caps,
+			//	"enr":       peerInfo.ENR,
+			//	"protocols": peerInfo.Protocols,
+			//},
 		}
 	}
 
@@ -258,7 +275,7 @@ func (ec *Client) Transaction(
 		return nil, fmt.Errorf("%w: could not get receipt for %x", err, body.tx.Hash())
 	}
 
-	var traces *Call
+	var traces *TraceBlockTransactionsResult
 	var rawTraces json.RawMessage
 	var addTraces bool
 	if header.Number.Int64() != GenesisBlockIndex { // not possible to get traces at genesis
@@ -451,7 +468,7 @@ func (ec *Client) getBlock(
 	// We fetch traces last because we want to avoid limiting the number of other
 	// block-related data fetches we perform concurrently (we limit the number of
 	// concurrent traces that are computed to 16 to avoid overwhelming geth).
-	var traces []*rpcCall
+	var traces *TraceBlockTransactions
 	var rawTraces []*rpcRawCall
 	var addTraces bool
 	if head.Number.Int64() != GenesisBlockIndex { // not possible to get traces at genesis
@@ -488,7 +505,7 @@ func (ec *Client) getBlock(
 			continue
 		}
 
-		loadedTxs[i].Trace = traces[i].Result
+		loadedTxs[i].Trace = &traces.Result[i]
 		loadedTxs[i].RawTrace = rawTraces[i].Result
 	}
 
@@ -534,13 +551,13 @@ func effectiveGasPrice(tx *EthTypes.Transaction, baseFee *big.Int) (*big.Int, er
 func (ec *Client) getTransactionTraces(
 	ctx context.Context,
 	transactionHash common.Hash,
-) (*Call, json.RawMessage, error) {
+) (*TraceBlockTransactionsResult, json.RawMessage, error) {
 	if err := ec.traceSemaphore.Acquire(ctx, semaphoreTraceWeight); err != nil {
 		return nil, nil, err
 	}
 	defer ec.traceSemaphore.Release(semaphoreTraceWeight)
 
-	var call *Call
+	var call *TraceBlockTransactionsResult
 	var raw json.RawMessage
 	err := ec.c.CallContext(ctx, &raw, "debug_traceTransaction", transactionHash, ec.tc)
 	if err != nil {
@@ -555,19 +572,121 @@ func (ec *Client) getTransactionTraces(
 	return call, raw, nil
 }
 
+type TraceBlockTransactions struct {
+	ID      int64  `json:"id"`
+	Jsonrpc string `json:"jsonrpc"`
+	Result  []TraceBlockTransactionsResult `json:"result"`
+}
+
+type TraceBlockTransactionsResult struct {
+		BlockHash   string `json:"blockHash"`
+		BlockNumber string `json:"blockNumber"`
+		Output      string `json:"output"`
+		Trace       []BlockTrace `json:"trace"`
+		TransactionHash  string `json:"transactionHash"`
+		TransactionIndex string `json:"transactionIndex"`
+}
+
+
+type BlockTrace struct {
+		Action  BlockTraceAction `json:"action"`
+		Result BlockTraceResult `json:"result"`
+		Subtraces    string        `json:"subtraces"`
+		TraceAddress []interface{} `json:"traceAddress"`
+		Type         string        `json:"type"`
+}
+
+func (t *BlockTrace) flatten() *flatCall {
+	return &flatCall{
+		Type:         t.Type,
+		From:         common.HexToAddress(t.Action.From),
+		To:           common.HexToAddress(t.Action.To),
+		//FIXME velas wip
+		//Value:        t.Action.Value,
+		//GasUsed:      t.Result.GasUsed,
+		//Revert:       t.Revert,
+		//ErrorMessage: t.ErrorMessage,
+	}
+}
+
+//FIXME velas wip
+//func (t *BlockTraceAction) UnmarshalJSON(input []byte) error {
+//	type CustomTrace struct {
+//		Value        *hexutil.Big   `json:"value"`
+//		Revert       bool
+//		ErrorMessage string  `json:"error"`
+//	}
+//	var dec CustomTrace
+//	if err := json.Unmarshal(input, &dec); err != nil {
+//		return err
+//	}
+//
+//	t.Type = dec.Type
+//	t.From = dec.From
+//	t.To = dec.To
+//	if dec.Value != nil {
+//		t.Value = (*big.Int)(dec.Value)
+//	} else {
+//		t.Value = new(big.Int)
+//	}
+//
+//	if dec.ErrorMessage != "" {
+//		// Any error surfaced by the decoder means that the transaction
+//		// has reverted.
+//		t.Revert = true
+//	}
+//	t.ErrorMessage = dec.ErrorMessage
+//	t.Calls = dec.Calls
+//	return nil
+//}
+
+//FIXME velas wip
+//func (t *BlockTraceResult) UnmarshalJSON(input []byte) error {
+//	type CustomTraceResult struct {
+//		GasUsed      *hexutil.Big   `json:"gasUsed"`
+//	}
+//	var dec CustomTraceResult
+//	if err := json.Unmarshal(input, &dec); err != nil {
+//		return err
+//	}
+//
+//
+//	if dec.GasUsed != nil {
+//		t.GasUsed = (*big.Int)(dec.Value)
+//	} else {
+//		t.GasUsed = new(big.Int)
+//	}
+//	return nil
+//}
+
+
+type BlockTraceAction struct {
+	CallType string `json:"callType"`
+	From     string `json:"from"`
+	Gas      string `json:"gas"`
+	Input    string `json:"input"`
+	To       string `json:"to"`
+	Value    string `json:"value"`
+}
+
+type BlockTraceResult struct {
+	GasUsed string `json:"gasUsed"`
+	Output  string `json:"output"`
+}
+
 func (ec *Client) getBlockTraces(
 	ctx context.Context,
 	blockHash common.Hash,
-) ([]*rpcCall, []*rpcRawCall, error) {
+) (*TraceBlockTransactions, []*rpcRawCall, error) {
 	if err := ec.traceSemaphore.Acquire(ctx, semaphoreTraceWeight); err != nil {
 		return nil, nil, err
 	}
 	defer ec.traceSemaphore.Release(semaphoreTraceWeight)
 
-	var calls []*rpcCall
+	var calls *TraceBlockTransactions
 	var rawCalls []*rpcRawCall
 	var raw json.RawMessage
-	err := ec.c.CallContext(ctx, &raw, "debug_traceBlockByHash", blockHash, ec.tc)
+	err := ec.c.CallContext(ctx, &raw, "trace_replayBlockTransactions", blockHash, ec.tc)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -710,23 +829,27 @@ func (t *Call) UnmarshalJSON(input []byte) error {
 }
 
 // flattenTraces recursively flattens all traces.
-func flattenTraces(data *Call, flattened []*flatCall) []*flatCall {
-	results := append(flattened, data.flatten())
-	for _, child := range data.Calls {
+func flattenTraces(data *TraceBlockTransactionsResult, flattened []*flatCall) []*flatCall {
+	results := flattened
+
+	// FIXME velas wip
+	for _, child := range data.Trace {
 		// Ensure all children of a reverted call
 		// are also reverted!
-		if data.Revert {
-			child.Revert = true
+		//if data.Revert {
+		//	child.Revert = true
+		//
+		//	// Copy error message from parent
+		//	// if child does not have one
+		//	if len(child.ErrorMessage) == 0 {
+		//		child.ErrorMessage = data.ErrorMessage
+		//	}
+		//}
+		//
+		//FIXME velas wip
+		//children := flattenTraces(child, flattened)
 
-			// Copy error message from parent
-			// if child does not have one
-			if len(child.ErrorMessage) == 0 {
-				child.ErrorMessage = data.ErrorMessage
-			}
-		}
-
-		children := flattenTraces(child, flattened)
-		results = append(results, children...)
+		results = append(results, child.flatten())
 	}
 	return results
 }
@@ -925,7 +1048,7 @@ type loadedTransaction struct {
 	Miner       string
 	Status      bool
 
-	Trace    *Call
+	Trace    *TraceBlockTransactionsResult
 	RawTrace json.RawMessage
 	Receipt  *types.Receipt
 }
