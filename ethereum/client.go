@@ -1563,7 +1563,7 @@ func (ec *Client) Balance(
 			}
 		}`, blockQuery, account.Address))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query balance: %s, query: %s, address: %s",err.Error(), blockQuery, account.Address)
 	}
 
 	var bal graphqlBalance
@@ -1572,7 +1572,7 @@ func (ec *Client) Balance(
 	}
 
 	if len(bal.Errors) > 0 {
-		return nil, errors.New(RosettaTypes.PrintStruct(bal.Errors))
+		return nil, errors.New("balance error: " + RosettaTypes.PrintStruct(bal.Errors) + fmt.Sprintf(", query: %s, address: %s",blockQuery, account.Address))
 	}
 
 	balance, ok := new(big.Int).SetString(bal.Data.Block.Account.Balance[2:], 16)
