@@ -1487,6 +1487,8 @@ type rpcProgress struct {
 // syncProgress retrieves the current progress of the sync algorithm. If there's
 // no sync currently running, it returns nil.
 func (ec *Client) syncProgress(ctx context.Context) (*ethereum.SyncProgress, error) {
+	//FIXME velas wip
+	return nil, nil
 	var raw json.RawMessage
 	if err := ec.c.CallContext(ctx, &raw, "eth_syncing"); err != nil {
 		return nil, err
