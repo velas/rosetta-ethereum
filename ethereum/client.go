@@ -282,7 +282,7 @@ func (ec *Client) Transaction(
 		addTraces = true
 		traces, rawTraces, err = ec.getTransactionTraces(ctx, body.tx.Hash())
 		if err != nil {
-			return nil, fmt.Errorf("%w: could not get traces for %x", err, body.tx.Hash())
+			return nil, fmt.Errorf("%w: could not get transaction traces for %x", err, body.tx.Hash())
 		}
 	}
 
@@ -481,7 +481,7 @@ func (ec *Client) getBlock(
 		addTraces = true
 		traces, rawTraces, err = ec.getBlockTraces(ctx, body.Hash)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: could not get traces for %x", err, body.Hash[:])
+			return nil, nil, fmt.Errorf("%w: could not get block traces for %x", err, body.Hash[:])
 		}
 	}
 
