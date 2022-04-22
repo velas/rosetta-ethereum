@@ -59,7 +59,7 @@ func (g *GraphQLClient) Query(ctx context.Context, input string) (string, error)
 	if err != nil {
 		return "", err
 	}
-
+    request.Header.Set("Content-Type", "application/json")
 	response, err := g.client.Do(request)
 	if err != nil {
 		return "", err
